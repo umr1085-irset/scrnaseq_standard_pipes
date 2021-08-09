@@ -10,6 +10,7 @@ save_seurat_obj_path = args[2]
 
 library(Seurat)
 library(SingleCellExperiment)
+library(scater)
 
 # read pre_pipe output file
 obj <- readRDS(file=input_seurat_obj_path)
@@ -19,9 +20,10 @@ obj <- subset(x = obj, subset = scateroutlier != 'TRUE') # keep non-outlier cell
 obj <- subset(x = obj, subset = DoubletFinder != 'Doublet') # keep singlets
 
 # cleanup step
+obj[['umap']] <- NULL
+obj[['pca']] <- NULL
 DefaultAssay(object = obj) <- "RNA"
 obj[['SCT']] <- NULL
-obj[['umap']] <- NULL
 obj@meta.data[['nCount_SCT']] <- NULL
 obj@meta.data[['nFeature_SCT']] <- NULL
 obj@meta.data[['S.Score']] <- NULL
