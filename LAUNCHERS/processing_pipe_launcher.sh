@@ -7,15 +7,14 @@
 #SBATCH --partition=sihp # cluster partition to use
 #SBATCH --mail-user=<user-email> # user email
 #SBATCH --mail-type=ALL # receive emails for all updates
-#SBATCH --chdir=<output-directory> # output directory where files will be created
+#SBATCH --chdir=<output-dir> # output directory where files will be created
 
-input_seurat=/groups/irset/archives/SingleCell/projects/20210611_download/SIN_MESO_v2/SIN_MESO_v2_seurat_metadata.rds
-output_seurat=SIN_MESO_v2_seurat_processed.rds
+input_seurat=.rds # absolute path to .rds preprocessed file
+output_seurat=.rds # .rds output file. No absolute path required
 
-#CURRPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
-#BASEPATH=$ dirname -z $CURRPATH
-#SCRIPTPATH="$BASEPATH/SCRIPTS/pre_pipe.R"
-#echo $SCRIPTPATH
+#--------------------------------------------------------------------------------
+# Do not modify below
+#--------------------------------------------------------------------------------
 
 # check if script is started via SLURM or bash
 # if with SLURM: there variable '$SLURM_JOB_ID' will exist

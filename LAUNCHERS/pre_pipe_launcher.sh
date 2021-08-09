@@ -5,17 +5,16 @@
 #SBATCH --mem=500G
 #SBATCH --cpus-per-task=16
 #SBATCH --partition=sihp # cluster partition to use
-#SBATCH --mail-user=paulrivaud.info@gmail.com # user email
+#SBATCH --mail-user=<user-email> # user email
 #SBATCH --mail-type=ALL # receive emails for all updates
-#SBATCH --chdir=/groups/irset/privaud/test/ # output directory where files will be created
+#SBATCH --chdir=<output-dir> # output directory where files will be created
 
-input_seurat=/groups/irset/archives/SingleCell/projects/20210611_download/IBU/IBU.rds # input Seurat object (rds file)
-output_seurat=IBU_metadata.rds # output file name. No absolute path required
+input_seurat=.rds # input Seurat object (absolute path to rds file)
+output_seurat=.rds # .rds output file name. No absolute path required
 
-#CURRPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P)"
-#BASEPATH=$ dirname -z $CURRPATH
-#SCRIPTPATH="$BASEPATH/SCRIPTS/pre_pipe.R"
-#echo $SCRIPTPATH
+#--------------------------------------------------------------------------------
+# Do not modify below
+#--------------------------------------------------------------------------------
 
 # check if script is started via SLURM or bash
 # if with SLURM: there variable '$SLURM_JOB_ID' will exist
