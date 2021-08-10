@@ -36,8 +36,7 @@ obj@meta.data[[lbl]] <- NULL
 
 # Keep genes with more than 10 expressing cells
 numgenes <- nexprs(GetAssayData(object = obj, slot = "counts"), byrow=TRUE)
-obj <- obj[numgenes >= 10,] 
-obj
+obj <- obj[numgenes >= 10,]
 
 # SCTransform
 obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
