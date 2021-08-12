@@ -1,6 +1,6 @@
 # Preprocessing and processing scRNA-seq pipelines
 
-This package encapsulates two pipelines and their respective launch scripts. Please read the section on how to launch the scripts
+This repository encapsulates two pipelines and their respective launch scripts. Please read the section on how to launch the scripts
 
 ## Preprocessing pipeline
 
