@@ -17,11 +17,11 @@ obj <- readRDS(file=input_seurat_obj_path)
 
 # Add ribo and mito metadata
 
-mito.genes <- rownames(obj)[grep("^MT-",rownames(obj))]
+mito.genes <- rownames(obj)[grep("^[Mm][Tt]-",rownames(obj))]
 percent.mito <- colSums(GetAssayData(object = obj, slot = "counts")[mito.genes,])/Matrix::colSums(GetAssayData(object = obj, slot = "counts"))*100
 obj <- AddMetaData(obj, percent.mito, col.name = "percent.mito")
 
-ribo.genes <- rownames(obj)[grep("^RP[SL]",rownames(obj))]
+ribo.genes <- rownames(obj)[grep("^R[Pp][SLsl]",rownames(obj))]
 percent.ribo <- colSums(GetAssayData(object = obj, slot = "counts")[ribo.genes,])/Matrix::colSums(GetAssayData(object = obj, slot = "counts"))*100
 obj <- AddMetaData(obj, percent.ribo, col.name = "percent.ribo")
 
@@ -75,8 +75,10 @@ obj <- AddMetaData(obj,dfcols,col.name = 'DoubletFinder') # add metadata to main
 # SCTransform
 
 obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
-s.genes <- cc.genes$s.genes # extract genes associated to S cycle
-g2m.genes <- cc.genes$g2m.genes # extract genes associated to G2M cycle
+#s.genes <- cc.genes$s.genes # extract genes associated to S cycle
+#g2m.genes <- cc.genes$g2m.genes # extract genes associated to G2M cycle
+s.genes <- rownames(obj)[tolower(rownames(obj) %in% tolower(cc.genes$s.genes)]
+g2m.genes <- rownames(obj)[tolower(rownames(obj) %in% tolower(cc.genes$g2m.genes)]
 obj <- CellCycleScoring(obj, s.features = s.genes, g2m.features = g2m.genes, assay = 'SCT', set.ident=TRUE) # compute cell cyle scores for all cells
 
 # Dim Red
@@ -91,3 +93,10 @@ obj <- FindClusters(obj) # Louvain clustering
 # Save Seurat object
 
 saveRDS(obj, file = save_seurat_obj_path)
+
+# FindAllMarkers
+
+DefaultAssay(obj) <- "RNA"
+obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
+markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, features=VariableFeatures(obj))
+saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))

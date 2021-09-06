@@ -40,8 +40,10 @@ obj <- obj[numgenes >= 10,]
 
 # SCTransform
 obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
-s.genes <- cc.genes$s.genes # extract genes associated to S cycle
-g2m.genes <- cc.genes$g2m.genes # extract genes associated to G2M cycle
+#s.genes <- cc.genes$s.genes # extract genes associated to S cycle
+#g2m.genes <- cc.genes$g2m.genes # extract genes associated to G2M cycle
+s.genes <- rownames(obj)[tolower(rownames(obj) %in% tolower(cc.genes$s.genes)]
+g2m.genes <- rownames(obj)[tolower(rownames(obj) %in% tolower(cc.genes$g2m.genes)]
 obj <- CellCycleScoring(obj, s.features = s.genes, g2m.features = g2m.genes, assay = 'SCT', set.ident=TRUE) # compute cell cyle scores for all cells
 
 # Dim Red
@@ -53,3 +55,9 @@ obj <- FindClusters(obj) # Louvain clustering
 
 # Save Seurat object
 saveRDS(obj, file = save_seurat_obj_path)
+
+# FindAllMarkers
+DefaultAssay(obj) <- "RNA"
+obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
+markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))
