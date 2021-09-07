@@ -42,8 +42,8 @@ obj <- obj[numgenes >= 10,]
 obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
 #s.genes <- cc.genes$s.genes # extract genes associated to S cycle
 #g2m.genes <- cc.genes$g2m.genes # extract genes associated to G2M cycle
-s.genes <- rownames(obj)[tolower(rownames(obj) %in% tolower(cc.genes$s.genes)]
-g2m.genes <- rownames(obj)[tolower(rownames(obj) %in% tolower(cc.genes$g2m.genes)]
+s.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$s.genes)]
+g2m.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$g2m.genes)]
 obj <- CellCycleScoring(obj, s.features = s.genes, g2m.features = g2m.genes, assay = 'SCT', set.ident=TRUE) # compute cell cyle scores for all cells
 
 # Dim Red
