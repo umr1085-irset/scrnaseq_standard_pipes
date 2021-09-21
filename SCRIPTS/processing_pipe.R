@@ -26,11 +26,11 @@ DefaultAssay(object = obj) <- "RNA"
 obj[['SCT']] <- NULL
 obj@meta.data[['nCount_SCT']] <- NULL
 obj@meta.data[['nFeature_SCT']] <- NULL
-obj@meta.data[['S.Score']] <- NULL
-obj@meta.data[['G2M.Score']] <- NULL
+#obj@meta.data[['S.Score']] <- NULL
+#obj@meta.data[['G2M.Score']] <- NULL
+#obj@meta.data[['Phase']] <- NULL
 obj@meta.data[['old.ident']] <- NULL
 obj@meta.data[['seurat_clusters']] <- NULL
-obj@meta.data[['Phase']] <- NULL
 lbl <- names(obj@meta.data)[startsWith(names(obj@meta.data),'SCT_snn_res')]
 obj@meta.data[[lbl]] <- NULL
 
@@ -39,12 +39,11 @@ numgenes <- nexprs(GetAssayData(object = obj, slot = "counts"), byrow=TRUE)
 obj <- obj[numgenes >= 10,]
 
 # SCTransform
-obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
-#s.genes <- cc.genes$s.genes # extract genes associated to S cycle
-#g2m.genes <- cc.genes$g2m.genes # extract genes associated to G2M cycle
-s.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$s.genes)]
-g2m.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$g2m.genes)]
-obj <- CellCycleScoring(obj, s.features = s.genes, g2m.features = g2m.genes, assay = 'SCT', set.ident=TRUE) # compute cell cyle scores for all cells
+#obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
+#s.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$s.genes)]
+#g2m.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$g2m.genes)]
+#obj <- CellCycleScoring(obj, s.features = s.genes, g2m.features = g2m.genes, assay = 'SCT', set.ident=TRUE) # compute cell cyle scores for all cells
+obj <- SCTransform(obj, assay = 'RNA', new.assay.name = 'SCT', vars.to.regress = c('percent.mito', 'S.Score', 'G2M.Score')) # normalize again but this time including also the cell cycle scores
 
 # Dim Red
 obj <- RunPCA(obj, features = VariableFeatures(object = obj), npcs=100)
@@ -66,6 +65,7 @@ saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_
 # QC figures
 ############
 
+input_seurat_obj_path <- save_seurat_obj_path
 #------------------------------------------#
 input_markers_obj_path <- sprintf("%s.markers.rds",gsub(".rds$","",input_seurat_obj_path))
 save_pdf_path          <- sprintf("%s.figures.pdf",gsub(".rds$","",input_seurat_obj_path))
@@ -160,7 +160,7 @@ spot.plot <- function(df, title = NULL) {
         scale_color_gradientn( colors= brewer.pal(n = 8, name = "Reds")) +
         theme_bw() +
         theme(
-            axis.text.x=element_text(angle=90, hjust=1, vjust=0.5, size=10),
+            axis.text.x=element_text(angle=90, hjust=1, vjust=0.5, size=6),
             axis.text.y=element_text(size=10),
             axis.title.x = element_blank(),
             axis.title.y = element_blank(),

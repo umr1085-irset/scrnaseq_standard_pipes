@@ -105,7 +105,7 @@ spot.plot <- function(df, title = NULL) {
 		scale_color_gradientn( colors= brewer.pal(n = 8, name = "Reds")) +
 		theme_bw() +
 		theme(
-			axis.text.x=element_text(angle=90, hjust=1, vjust=0.5, size=10),
+			axis.text.x=element_text(angle=90, hjust=1, vjust=0.5, size=6),
 			axis.text.y=element_text(size=10),
 			axis.title.x = element_blank(),
 			axis.title.y = element_blank(),
