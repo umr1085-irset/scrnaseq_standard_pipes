@@ -85,7 +85,7 @@ obj <- RunPCA(obj, features = VariableFeatures(object = obj), npcs=100)
 nDims = 30
 obj <- RunUMAP(obj, dims = 1:nDims) # run UMAP on PCA
 obj <- FindNeighbors(obj, dims = 1:nDims) # build knn graph then snn graph
-obj <- FindClusters(obj) # Louvain clustering
+obj <- FindClusters(obj,resolution = 1) # Louvain clustering
 
 # Save Seurat object
 

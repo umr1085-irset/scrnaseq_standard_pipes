@@ -15,9 +15,15 @@ library(scater)
 # read pre_pipe output file
 obj <- readRDS(file=input_seurat_obj_path)
 
+# cell selection
+sel.inliers <- rownames(obj@meta.data[obj@meta.data$scateroutlier==FALSE,])
+sel.singlets <- rownames(obj@meta.data[obj@meta.data$DoubletFinder=='Singlet',])
+sel.cells <- intersect(sel.inliers,sel.singlets) #intersection inliers and singlets
+
 # Remove outliers and doublets
-obj <- subset(x = obj, subset = scateroutlier != 'TRUE') # keep non-outlier cells
-obj <- subset(x = obj, subset = DoubletFinder != 'Doublet') # keep singlets
+#obj <- subset(x = obj, subset = scateroutlier != 'TRUE') # keep non-outlier cells
+#obj <- subset(x = obj, subset = DoubletFinder != 'Doublet') # keep singlets
+obj <- subset(x = obj, cells = unique(sel.cells)) # keep non-outlier cells
 
 # cleanup step
 obj[['umap']] <- NULL
@@ -50,7 +56,7 @@ obj <- RunPCA(obj, features = VariableFeatures(object = obj), npcs=100)
 nDims = 30
 obj <- RunUMAP(obj, dims = 1:nDims) # run UMAP on PCA
 obj <- FindNeighbors(obj, dims = 1:nDims) # build knn graph then snn graph
-obj <- FindClusters(obj) # Louvain clustering
+obj <- FindClusters(obj,resolution = 1) # Louvain clustering
 
 # Save Seurat object
 saveRDS(obj, file = save_seurat_obj_path)

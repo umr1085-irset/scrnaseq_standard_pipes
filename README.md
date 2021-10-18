@@ -12,9 +12,10 @@ This repository encapsulates two pipelines and their respective launch scripts. 
 	* Remove genes with less than 10 expressing cells
 	* Find cell outliers using `Scater's runColDataPCA()`, with ribosomal and mitochondrial read percentages, number of total reads and number of expressed genes as variables. Results stored under `scateroutlier`. PCA coordinates stored under `scateroutlierPC1` and `scateroutlierPC2`
 	* Find doublet cells using `DoubletFinder`. This is performed on individual samples. Results stored under `DoubletFinder`
-	* Apply `Seurat's SCTransform() and CellCycleScoring()` 
+	* Apply `Seurat's SCTransform() and CellCycleScoring()`. Rerun `SCTransform()` and regress on mitochondrial read percentage, S and G2M cell cycle scores
 	* Compute dimensionality reductions (PCA, UMAP)
 	* Find clusters, stored under `seurat_clusters`
+	* Run `Seurat's FindAllMakers()` using the top 5000 most variable features
 	* Save Seurat object
 
 ## Processing pipeline
@@ -24,9 +25,10 @@ This repository encapsulates two pipelines and their respective launch scripts. 
 	* Remove outliers and doublets
 	* Clean object (umap, pca, SCT assay, multiple metadata columns)
 	* Remove genes with less than 10 expressing cells
-	* Apply `Seurat's SCTransform() and CellCycleScoring()`
+	* Run `SCTransform()` and regress on mitochondrial read percentage, S and G2M cell cycle scores
 	* Compute dimensionality reductions (PCA, UMAP)
 	* Find clusters
+	* Run `Seurat's FindAllMakers()` using the top 5000 most variable features
 	* Save Seurat object
 
 ## Use launch scripts
