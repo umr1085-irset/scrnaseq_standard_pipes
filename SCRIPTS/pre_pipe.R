@@ -15,8 +15,11 @@ library(DoubletFinder)
 
 obj <- readRDS(file=input_seurat_obj_path)
 
-# Add ribo and mito metadata
+obj <- NormalizeData(obj)
+obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
+obj <- ScaleData(obj)
 
+# Add ribo and mito metadata
 mito.genes <- rownames(obj)[grep("^[Mm][Tt]-",rownames(obj))]
 percent.mito <- colSums(GetAssayData(object = obj, slot = "counts")[mito.genes,])/Matrix::colSums(GetAssayData(object = obj, slot = "counts"))*100
 obj <- AddMetaData(obj, percent.mito, col.name = "percent.mito")
@@ -26,18 +29,15 @@ percent.ribo <- colSums(GetAssayData(object = obj, slot = "counts")[ribo.genes,]
 obj <- AddMetaData(obj, percent.ribo, col.name = "percent.ribo")
 
 # Keep cells with more than 200 features
-
 obj <- obj[,obj@meta.data$nFeature_RNA>=200]
 obj
 
 # Keep genes with more than 10 expressing cells
-
 numgenes <- nexprs(GetAssayData(object = obj, slot = "counts"), byrow=TRUE)
 obj <- obj[numgenes >= 10,] 
 obj
 
 # Scater
-
 obj.sce <- as.SingleCellExperiment(obj)
 obj.sce  <- runColDataPCA(obj.sce,variables=c("percent.mito","percent.ribo","nCount_RNA","nFeature_RNA"),outliers=TRUE,name='PCA_coldata') # run pca on col data
 obj@meta.data$scateroutlier <- colData(obj.sce)$outlier
@@ -73,7 +73,6 @@ for (sample in unique(obj@meta.data$orig.ident)){
 obj <- AddMetaData(obj,dfcols,col.name = 'DoubletFinder') # add metadata to main object
 
 # SCTransform
-
 obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
 s.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$s.genes)]
 g2m.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$g2m.genes)]
@@ -88,13 +87,11 @@ obj <- FindNeighbors(obj, dims = 1:nDims) # build knn graph then snn graph
 obj <- FindClusters(obj,resolution = 1) # Louvain clustering
 
 # Save Seurat object
-
 saveRDS(obj, file = save_seurat_obj_path)
 
 # FindAllMarkers
-
 DefaultAssay(obj) <- "RNA"
-obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
+#obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
 markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, features=VariableFeatures(obj))
 saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))
 

@@ -16,13 +16,11 @@ library(scater)
 obj <- readRDS(file=input_seurat_obj_path)
 
 # cell selection
-sel.inliers <- rownames(obj@meta.data[obj@meta.data$scateroutlier==FALSE,])
-sel.singlets <- rownames(obj@meta.data[obj@meta.data$DoubletFinder=='Singlet',])
+sel.inliers <- rownames(obj@meta.data)[which(obj@meta.data$scateroutlier==FALSE)]
+sel.singlets <- rownames(obj@meta.data)[which(obj@meta.data$DoubletFinder=='Singlet')]
 sel.cells <- intersect(sel.inliers,sel.singlets) #intersection inliers and singlets
 
 # Remove outliers and doublets
-#obj <- subset(x = obj, subset = scateroutlier != 'TRUE') # keep non-outlier cells
-#obj <- subset(x = obj, subset = DoubletFinder != 'Doublet') # keep singlets
 obj <- subset(x = obj, cells = unique(sel.cells)) # keep non-outlier cells
 
 # cleanup step
@@ -63,6 +61,7 @@ saveRDS(obj, file = save_seurat_obj_path)
 
 # FindAllMarkers
 DefaultAssay(obj) <- "RNA"
+#obj <- NormalizeData(obj, normalization.method = "LogNormalize", scale.factor = 10000)
 obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
 markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, features=VariableFeatures(obj))
 saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))
