@@ -91,7 +91,6 @@ saveRDS(obj, file = save_seurat_obj_path)
 
 # FindAllMarkers
 DefaultAssay(obj) <- "RNA"
-#obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
 markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, features=VariableFeatures(obj))
 saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))
 
