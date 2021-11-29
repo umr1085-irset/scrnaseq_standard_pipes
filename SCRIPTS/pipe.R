@@ -11,72 +11,42 @@ save_seurat_obj_path = args[2]
 library(Seurat)
 library(SingleCellExperiment)
 library(scater)
-library(DoubletFinder)
 
+# read pre_pipe output file
 obj <- readRDS(file=input_seurat_obj_path)
 
-obj <- NormalizeData(obj)
-obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 5000)
-obj <- ScaleData(obj)
+# cell selection
+sel.inliers <- rownames(obj@meta.data)[which(obj@meta.data$scateroutlier==FALSE)]
+sel.singlets <- rownames(obj@meta.data)[which(obj@meta.data$DoubletFinder=='Singlet')]
+sel.cells <- intersect(sel.inliers,sel.singlets) #intersection inliers and singlets
 
-# Add ribo and mito metadata
-mito.genes <- rownames(obj)[grep("^[Mm][Tt]-",rownames(obj))]
-percent.mito <- colSums(GetAssayData(object = obj, slot = "counts")[mito.genes,])/Matrix::colSums(GetAssayData(object = obj, slot = "counts"))*100
-obj <- AddMetaData(obj, percent.mito, col.name = "percent.mito")
+# Remove outliers and doublets
+obj <- subset(x = obj, cells = unique(sel.cells)) # keep non-outlier cells
 
-ribo.genes <- rownames(obj)[grep("^R[Pp][SLsl]",rownames(obj))]
-percent.ribo <- colSums(GetAssayData(object = obj, slot = "counts")[ribo.genes,])/Matrix::colSums(GetAssayData(object = obj, slot = "counts"))*100
-obj <- AddMetaData(obj, percent.ribo, col.name = "percent.ribo")
-
-# Keep cells with more than 200 features
-obj <- obj[,obj@meta.data$nFeature_RNA>=200]
-obj
+# cleanup step
+obj[['umap']] <- NULL
+obj[['pca']] <- NULL
+DefaultAssay(object = obj) <- "RNA"
+obj[['SCT']] <- NULL
+obj@meta.data[['nCount_SCT']] <- NULL
+obj@meta.data[['nFeature_SCT']] <- NULL
+#obj@meta.data[['S.Score']] <- NULL
+#obj@meta.data[['G2M.Score']] <- NULL
+#obj@meta.data[['Phase']] <- NULL
+obj@meta.data[['old.ident']] <- NULL
+obj@meta.data[['seurat_clusters']] <- NULL
+lbl <- names(obj@meta.data)[startsWith(names(obj@meta.data),'SCT_snn_res')]
+obj@meta.data[[lbl]] <- NULL
 
 # Keep genes with more than 10 expressing cells
 numgenes <- nexprs(GetAssayData(object = obj, slot = "counts"), byrow=TRUE)
-obj <- obj[numgenes >= 10,] 
-obj
-
-# Scater
-obj.sce <- as.SingleCellExperiment(obj)
-obj.sce  <- runColDataPCA(obj.sce,variables=c("percent.mito","percent.ribo","nCount_RNA","nFeature_RNA"),outliers=TRUE,name='PCA_coldata') # run pca on col data
-obj@meta.data$scateroutlier <- colData(obj.sce)$outlier
-obj@meta.data$scateroutlierPC1 <- as.vector(reducedDim(obj.sce, "PCA_coldata")[,1])
-obj@meta.data$scateroutlierPC2 <- as.vector(reducedDim(obj.sce, "PCA_coldata")[,2])
-
-# DoubletFinder
-
-dfcols <- data.frame(matrix(ncol = 1, nrow = 0))
-colnames(dfcols) <- "DoubletFinder"
-
-for (sample in unique(obj@meta.data$orig.ident)){
-    print(sample)
-    #obj.sub <- subset(x = obj, subset = orig.ident == sample)
-    obj.sub = obj[,obj@meta.data$orig.ident==sample]
-    obj.sub <- NormalizeData(obj.sub)
-    obj.sub <- ScaleData(obj.sub)
-    obj.sub <- FindVariableFeatures(obj.sub, selection.method = "vst", nfeatures = 2000)
-    obj.sub <- RunPCA(obj.sub)
-    sweep.res.list_sub.seurat <- paramSweep_v3(obj.sub, PCs = 1:10, sct = FALSE)
-    sweep.stats_sub.seurat<- summarizeSweep(sweep.res.list_sub.seurat, GT = FALSE)
-    bcmvn_sub.seurat <- find.pK(sweep.stats_sub.seurat)
-    pk = 0.09
-    nExp_poi <- round(0.075 * dim(obj.sub)[2])
-    obj.sub <- doubletFinder_v3(obj.sub, PCs = 1:10, pN = 0.25, pK = pk, nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE) # run DoubletFinder
-    
-    indexDFInfo <- which(names(obj.sub@meta.data) == sprintf("DF.classifications_0.25_%s_%s",pk,nExp_poi)) # extract DF results column index
-    tmpcol <- obj.sub@meta.data[indexDFInfo]
-    colnames(tmpcol) <- "DoubletFinder"
-    dfcols <- rbind(dfcols,tmpcol)
-}
-
-obj <- AddMetaData(obj,dfcols,col.name = 'DoubletFinder') # add metadata to main object
+obj <- obj[numgenes >= 10,]
 
 # SCTransform
-obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
-s.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$s.genes)]
-g2m.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$g2m.genes)]
-obj <- CellCycleScoring(obj, s.features = s.genes, g2m.features = g2m.genes, assay = 'SCT', set.ident=TRUE) # compute cell cyle scores for all cells
+#obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
+#s.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$s.genes)]
+#g2m.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$g2m.genes)]
+#obj <- CellCycleScoring(obj, s.features = s.genes, g2m.features = g2m.genes, assay = 'SCT', set.ident=TRUE) # compute cell cyle scores for all cells
 obj <- SCTransform(obj, assay = 'RNA', new.assay.name = 'SCT', vars.to.regress = c('percent.mito', 'S.Score', 'G2M.Score')) # normalize again but this time including also the cell cycle scores
 
 # Dim Red
