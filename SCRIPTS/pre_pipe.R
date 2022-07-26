@@ -12,6 +12,7 @@ library(Seurat)
 library(SingleCellExperiment)
 library(scater)
 library(DoubletFinder)
+library(SeuratWrappers)
 
 obj <- readRDS(file=input_seurat_obj_path)
 
@@ -72,6 +73,22 @@ for (sample in unique(obj@meta.data$orig.ident)){
 
 obj <- AddMetaData(obj,dfcols,col.name = 'DoubletFinder') # add metadata to main object
 
+# miQC
+# creates two metadata columns: miQC.probability and miQC.keep ('discard' and 'keep' possible values)
+
+obj <- RunMiQC(
+  obj,
+  percent.mt = "percent.mito",
+  nFeature_RNA = "nFeature_RNA",
+  posterior.cutoff = 0.75,
+  model.type = "linear",
+  model.slot = "flexmix_model",
+  verbose = TRUE,
+  backup.option = "percentile",
+  backup.percentile = 0.99,
+  backup.percent = 5
+)
+
 # SCTransform
 obj = SCTransform(obj, vars.to.regress = "percent.mito", verbose = FALSE) # run Seurat sctransform method
 s.genes <- rownames(obj)[tolower(rownames(obj)) %in% tolower(cc.genes$s.genes)]
@@ -89,10 +106,15 @@ obj <- FindClusters(obj,resolution = 1) # Louvain clustering
 # Save Seurat object
 saveRDS(obj, file = save_seurat_obj_path)
 
-# FindAllMarkers
+# Presto (replacement for FindAllMakers)
 DefaultAssay(obj) <- "RNA"
-markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, features=VariableFeatures(obj))
+markers.obj <- wilcoxauc(obj,'seurat_clusters')
 saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))
+
+# FindAllMarkers
+#DefaultAssay(obj) <- "RNA"
+#markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, features=VariableFeatures(obj))
+#saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))
 
 
 ############
@@ -211,8 +233,9 @@ spot.plot <- function(df, title = NULL) {
 #------------------------------------------#
 
 #------------------------------------------#
-seurat.obj  <- readRDS(input_seurat_obj_path)
-markers.obj <- readRDS(input_markers_obj_path)
+#seurat.obj  <- readRDS(input_seurat_obj_path)
+seurat.obj <- obj
+#markers.obj <- readRDS(input_markers_obj_path)
 #------------------------------------------#
 
 #------------------------------------------#
@@ -229,10 +252,12 @@ df$cells <- rownames(seurat.obj@meta.data)
 
 #------------------------------------------#
 df$outlier <- TRUE
-df$outlier[ which(df$DoubletFinder == "Singlet" & df$scateroutlier == FALSE) ] <- "FALSE"
+#df$outlier[ which(df$DoubletFinder == "Singlet" & df$scateroutlier == FALSE) ] <- "FALSE"
+df$outlier[ which(df$DoubletFinder == "Singlet" & df$scateroutlier == FALSE & df$miQC.keep == 'keep') ] <- "FALSE" # added miQC constraint
 
 df$scateroutlier <- factor(df$scateroutlier, levels=c(FALSE,TRUE))
 df$DoubletFinder <- factor(df$DoubletFinder, levels=c("Singlet","Doublet"))
+df$miQC.keep <- factor(df$miQC.keep, levels=c("keep","discard"))
 df$outlier       <- factor(df$outlier, levels=c(FALSE,TRUE))
 df$Phase         <- factor(df$Phase, levels=c("G1","S","G2M"))
 #------------------------------------------#
@@ -245,32 +270,62 @@ sample.coord <- cluster.coordinates(df, "orig.ident"     , "umap1", "umap2")
 #-----------------------------------------#
 #--- Identify top marker genes -----------#
 #-----------------------------------------#
-sel.markers.obj1 <- markers.obj[ !markers.obj$gene %in% unique(markers.obj$gene[grep("^[Mm][Tt]-|^R[Pp][SsLl]|^HIST|^Hist",markers.obj$gene)]), , drop=FALSE]
-sel.markers.obj1 <- sel.markers.obj1[ !tolower(sel.markers.obj1$gene) %in% tolower(c(cc.genes$s.genes, cc.genes$g2m.genes)), , drop=FALSE]
-sel.markers.obj1 <- sel.markers.obj1[ which( sel.markers.obj1$pct.1 >= 0.25 & sel.markers.obj1$pct.1 > sel.markers.obj1$pct.2 & sel.markers.obj1$avg_log2FC > 0 ), , drop=FALSE]
-sel.markers.obj1 <- sel.markers.obj1[ which( p.adjust(sel.markers.obj1$p_val,method="BH") <= 0.05 ), , drop=FALSE]
-sel.markers.obj1 <- sel.markers.obj1[ order(sel.markers.obj1$pct.1 - sel.markers.obj1$pct.2,decreasing=TRUE),, drop=FALSE]
+#sel.markers.obj1 <- markers.obj[ !markers.obj$gene %in% unique(markers.obj$gene[grep("^[Mm][Tt]-|^R[Pp][SsLl]|^HIST|^Hist",markers.obj$gene)]), , drop=FALSE]
+#sel.markers.obj1 <- sel.markers.obj1[ !tolower(sel.markers.obj1$gene) %in% tolower(c(cc.genes$s.genes, cc.genes$g2m.genes)), , drop=FALSE]
+#sel.markers.obj1 <- sel.markers.obj1[ which( sel.markers.obj1$pct.1 >= 0.25 & sel.markers.obj1$pct.1 > sel.markers.obj1$pct.2 & sel.markers.obj1$avg_log2FC > 0 ), , drop=FALSE]
+#sel.markers.obj1 <- sel.markers.obj1[ which( p.adjust(sel.markers.obj1$p_val,method="BH") <= 0.05 ), , drop=FALSE]
+#sel.markers.obj1 <- sel.markers.obj1[ order(sel.markers.obj1$pct.1 - sel.markers.obj1$pct.2,decreasing=TRUE),, drop=FALSE]
+#sel.markers.obj2 <- sel.markers.obj1[ sel.markers.obj1$gene %in% names(which( table(sel.markers.obj1$gene) <= 3)), , drop=FALSE]
 
-sel.markers.obj2 <- sel.markers.obj1[ sel.markers.obj1$gene %in% names(which( table(sel.markers.obj1$gene) <= 3)), , drop=FALSE]
+# Matching PRESTO
+sel.markers.obj1 <- markers.obj[ !markers.obj$feature %in% unique(markers.obj$feature[grep("^[Mm][Tt]-|^R[Pp][SsLl]|^HIST|^Hist",markers.obj$feature)]), , drop=FALSE]
+sel.markers.obj1 <- sel.markers.obj1[ !tolower(sel.markers.obj1$feature) %in% tolower(c(cc.genes$s.genes, cc.genes$g2m.genes)), , drop=FALSE]
+sel.markers.obj1 <- sel.markers.obj1[ which( sel.markers.obj1$pct_in >= 0.25 & sel.markers.obj1$pct_in > sel.markers.obj1$pct_out & sel.markers.obj1$logFC > 0 ), , drop=FALSE]
+sel.markers.obj1 <- sel.markers.obj1[ which( p.adjust(sel.markers.obj1$pval,method="BH") <= 0.05 ), , drop=FALSE]
+sel.markers.obj1 <- sel.markers.obj1[ order(sel.markers.obj1$pct_in - sel.markers.obj1$pct_out,decreasing=TRUE),, drop=FALSE]
+sel.markers.obj2 <- sel.markers.obj1[ sel.markers.obj1$feature %in% names(which( table(sel.markers.obj1$feature) <= 3)), , drop=FALSE]
 #-----------------------------------------#
 
 #-----------------------------------------#
 n.max <- 5
 sel.genes1 <- c()
 sel.genes2 <- c()
-for (clust in unique(markers.obj$cluster)) {
-    clust.indexes1 <- which(sel.markers.obj1$cluster == clust)
-    clust.indexes2 <- which(sel.markers.obj2$cluster == clust)
+
+#for (clust in unique(markers.obj$cluster)) {
+#    clust.indexes1 <- which(sel.markers.obj1$cluster == clust)
+#    clust.indexes2 <- which(sel.markers.obj2$cluster == clust)
+#
+#    n1 <- length(clust.indexes1)
+#    if ( n1 > 0) {
+#        if ( n1 > n.max) {n1 <- n.max}
+#        sel.genes1 <- c(sel.genes1, sel.markers.obj1[clust.indexes1[1:n1],,drop=FALSE]$gene)
+#    }
+#    n2 <- length(clust.indexes2)
+#    if ( n2 > 0) {
+#        if ( n2 > n.max ) {n2 <- n.max}
+#        sel.genes2 <- c(sel.genes2, sel.markers.obj2[clust.indexes2[1:n2],,drop=FALSE]$gene)
+#    }
+#}
+#sel.genes1 <- intersect(unique(sel.genes1[which( is.na(sel.genes1) == FALSE)]), rownames(seurat.obj))
+#sel.genes2 <- intersect(unique(sel.genes2[which( is.na(sel.genes2) == FALSE)]), rownames(seurat.obj))
+#sel.genes3 <- sort(rownames(seurat.obj)[ toupper(rownames(seurat.obj)) %in% c("HBE1","HBB","CD34","PECAM1","CD68","CD14","PTPRC","POU5F1","NANOG","DAZL","SYCP3","SRY","SOX9","AMH","CLU","INSL3","CYP17A1","CYP11A1","UPK3B","KRT19","WT1","GATA4","PDGFRA","PDGFRB","TCF21","SST","PLAU","CXCL14","MARCH3","PAX8","IFI44","IFIT3","OAS3","DDX58","PNOC","CDH6","CD24","FOXL2","LHX2","IRX3","CA9")])
+#sel.genes  <- unique(c(sel.genes1,sel.genes2, sel.genes3))
+#sel.genes  <- sort(sel.genes[ which( is.na(sel.genes) == FALSE ) ])
+
+# Matching PRESTO
+for (clust in unique(markers.obj$group)) {
+    clust.indexes1 <- which(sel.markers.obj1$group == clust)
+    clust.indexes2 <- which(sel.markers.obj2$group == clust)
 
     n1 <- length(clust.indexes1)
     if ( n1 > 0) {
         if ( n1 > n.max) {n1 <- n.max}
-        sel.genes1 <- c(sel.genes1, sel.markers.obj1[clust.indexes1[1:n1],,drop=FALSE]$gene)
+        sel.genes1 <- c(sel.genes1, sel.markers.obj1[clust.indexes1[1:n1],,drop=FALSE]$feature)
     }
     n2 <- length(clust.indexes2)
     if ( n2 > 0) {
         if ( n2 > n.max ) {n2 <- n.max}
-        sel.genes2 <- c(sel.genes2, sel.markers.obj2[clust.indexes2[1:n2],,drop=FALSE]$gene)
+        sel.genes2 <- c(sel.genes2, sel.markers.obj2[clust.indexes2[1:n2],,drop=FALSE]$feature)
     }
 }
 sel.genes1 <- intersect(unique(sel.genes1[which( is.na(sel.genes1) == FALSE)]), rownames(seurat.obj))
@@ -282,7 +337,7 @@ sel.genes  <- sort(sel.genes[ which( is.na(sel.genes) == FALSE ) ])
     
         
 #--------------------------------------#
-clusts <- levels(seurat.obj@meta.data$seurat_clusters)  
+clusts <- levels(seurat.obj@meta.data$seurat_clusters)
 #--------------------------------------#
 pct.m  <- matrix(0,nrow=length(sel.genes),ncol=length(clusts), dimnames=list(sel.genes, clusts))
 expr.m <- matrix(0,nrow=length(sel.genes),ncol=length(clusts), dimnames=list(sel.genes, clusts))
@@ -329,17 +384,18 @@ for (category in c("nCount_RNA","nFeature_RNA","percent.mito","percent.ribo")) {
     gs1[[inc(i)]] <- ggplot(sub.df, aes(x=cluster, y=metadata , fill=cluster)) + geom_boxplot(outlier.shape=NA) + coord_flip() + theme_bw() + scale_x_discrete(limits=rev) + theme( legend.position = 'none' , axis.title.x = element_blank(),axis.title.y = element_blank())
 }
 
-for (category in c("scateroutlier","DoubletFinder","outlier")) {
+for (category in c("scateroutlier","DoubletFinder","miQC.keep","outlier")) {
     gs1[[inc(i)]] <- AugmentPlot(scatter.plot(df, category, "umap1","umap2",title=category, colors=c("green","red"),with.legend="no"),dpi=200)
     
-    if (category == "scateroutlier") {
-        gs1[[inc(i)]] <- AugmentPlot(scatter.plot(df, category, "scateroutlierPC1","scateroutlierPC2",title=category, colors=c("green","red"),with.legend="no"),dpi=200)
-    }
+    #if (category == "scateroutlier") {
+    #    gs1[[inc(i)]] <- AugmentPlot(scatter.plot(df, category, "scateroutlierPC1","scateroutlierPC2",title=category, colors=c("green","red"),with.legend="no"),dpi=200)
+    #}
 }
-for (category in c("scateroutlier","DoubletFinder","outlier")) {
+
+for (category in c("scateroutlier","DoubletFinder","miQC.keep","outlier")) {
     gs1[[inc(i)]] <- ggplot(cluster.contingency.table(df,category,"seurat_clusters"), aes(x=cluster,y=n,fill=metadata)) + geom_bar(position="fill", stat="identity") +  scale_fill_manual(values=colorRampPalette(c("#DDDDDD", "#222222"))(length(levels(df[[category]])))) + theme_bw() + coord_flip() + theme( plot.title = element_text(size = 10, hjust = 0.5), legend.position="none", axis.title.x = element_blank(),axis.title.y = element_blank())
 }
-for (category in c("scateroutlier","DoubletFinder","outlier")) {
+for (category in c("scateroutlier","DoubletFinder","miQC.keep","outlier")) {
     gs1[[inc(i)]] <- ggplot(cluster.contingency.table(df,category,"orig.ident"), aes(x=cluster,y=n,fill=metadata)) + geom_bar(position="fill", stat="identity") +   scale_fill_manual(values=colorRampPalette(c("#DDDDDD", "#222222"))(length(levels(df[[category]])))) + theme_bw() + coord_flip() + theme( plot.title = element_text(size = 10, hjust = 0.5), legend.position="none", axis.title.x = element_blank(),axis.title.y = element_blank())
 }
 #------------------------------------------#
@@ -388,7 +444,7 @@ gs2[[inc(i)]] <- spot.plot( df2 , title = "Find markers"        ) + theme(  plot
 #------------------------------------------#
 
 #------------------------------------------#
-categories <- c("orig.ident","nCount_RNA","nFeature_RNA","percent.mito","percent.ribo","scateroutlier","scateroutlierPC1","scateroutlierPC2","DoubletFinder","nCount_SCT","nFeature_SCT","S.Score","G2M.Score","Phase","old.ident","seurat_clusters", colnames(seurat.obj@meta.data)[grep("^SCT_snn_res",colnames(seurat.obj@meta.data))])
+categories <- c("orig.ident","nCount_RNA","nFeature_RNA","percent.mito","percent.ribo","scateroutlier","scateroutlierPC1","scateroutlierPC2","DoubletFinder","miQC.keep","nCount_SCT","nFeature_SCT","S.Score","G2M.Score","Phase","old.ident","seurat_clusters", colnames(seurat.obj@meta.data)[grep("^SCT_snn_res",colnames(seurat.obj@meta.data))])
 other.categories <- setdiff( colnames(seurat.obj@meta.data), categories )
 
 i   <- 0
@@ -417,14 +473,23 @@ for (category in other.categories) {
 
 #------------------------------------------#
 pdf(save_pdf_path,height=28,width=14)
+#grid.arrange(grobs=gs1,ncol=4,nrow=8,layout_matrix = rbind(c(1, 1, 2, 2 ),
+#                                                   c(1, 1, 2, 2 ),
+#                                                   c(3, 4, 5, 6 ),
+#                                                   c(7, 8, 9, 10),
+#                                                   c(11,12,13,14),
+#                                                   c(15,16,17,18),
+#                                                   c(19,NA,20,21),
+#                                                   c(22,NA,23,24)))
+
 grid.arrange(grobs=gs1,ncol=4,nrow=8,layout_matrix = rbind(c(1, 1, 2, 2 ),
                                                    c(1, 1, 2, 2 ),
                                                    c(3, 4, 5, 6 ),
                                                    c(7, 8, 9, 10),
                                                    c(11,12,13,14),
                                                    c(15,16,17,18),
-                                                   c(19,NA,20,21),
-                                                   c(22,NA,23,24)))
+                                                   c(19,20,21,22),
+                                                   c(23,24,25,26)))
 
 grid.arrange(grobs=gs2,ncol=4,nrow=8,layout_matrix = rbind(c(1, 1, 2, 2 ),
                                                    c(1, 1, 2, 2 ),
