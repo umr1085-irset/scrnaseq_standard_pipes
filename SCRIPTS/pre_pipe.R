@@ -13,6 +13,7 @@ library(SingleCellExperiment)
 library(scater)
 library(DoubletFinder)
 library(SeuratWrappers)
+library(presto)
 
 obj <- readRDS(file=input_seurat_obj_path)
 
@@ -106,6 +107,8 @@ obj <- FindClusters(obj,resolution = 1) # Louvain clustering
 # Save Seurat object
 saveRDS(obj, file = save_seurat_obj_path)
 
+#obj <- readRDS(save_seurat_obj_path)
+
 # Presto (replacement for FindAllMakers)
 DefaultAssay(obj) <- "RNA"
 markers.obj <- wilcoxauc(obj,'seurat_clusters')
@@ -115,7 +118,6 @@ saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_
 #DefaultAssay(obj) <- "RNA"
 #markers.obj <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, features=VariableFeatures(obj))
 #saveRDS(markers.obj, file= sprintf("%s.markers.rds",gsub(".rds$","",save_seurat_obj_path)))
-
 
 ############
 # QC figures
@@ -444,7 +446,7 @@ gs2[[inc(i)]] <- spot.plot( df2 , title = "Find markers"        ) + theme(  plot
 #------------------------------------------#
 
 #------------------------------------------#
-categories <- c("orig.ident","nCount_RNA","nFeature_RNA","percent.mito","percent.ribo","scateroutlier","scateroutlierPC1","scateroutlierPC2","DoubletFinder","miQC.keep","nCount_SCT","nFeature_SCT","S.Score","G2M.Score","Phase","old.ident","seurat_clusters", colnames(seurat.obj@meta.data)[grep("^SCT_snn_res",colnames(seurat.obj@meta.data))])
+categories <- c("orig.ident","nCount_RNA","nFeature_RNA","percent.mito","percent.ribo","scateroutlier","scateroutlierPC1","scateroutlierPC2","DoubletFinder","miQC.keep","miQC.probability","nCount_SCT","nFeature_SCT","S.Score","G2M.Score","Phase","old.ident","seurat_clusters", colnames(seurat.obj@meta.data)[grep("^SCT_snn_res",colnames(seurat.obj@meta.data))])
 other.categories <- setdiff( colnames(seurat.obj@meta.data), categories )
 
 i   <- 0
@@ -508,3 +510,4 @@ dev.off()
 #------------------------------------------#
 
 quit(save="no")
+
