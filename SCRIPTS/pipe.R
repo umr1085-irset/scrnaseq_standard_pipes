@@ -18,6 +18,10 @@ obj <- readRDS(file=input_seurat_obj_path)
 # cell selection
 sel.inliers <- rownames(obj@meta.data)[which(obj@meta.data$scateroutlier==FALSE)]
 sel.singlets <- rownames(obj@meta.data)[which(obj@meta.data$DoubletFinder=='Singlet')]
+
+#sel.keep <- rownames(obj@meta.data)[which(obj@meta.data$miQC.keep=='keep')]
+#sel.cells <- intersect(sel.inliers,sel.singlets,sel.keep) #intersection inliers and singlets and miqc
+
 sel.cells <- intersect(sel.inliers,sel.singlets) #intersection inliers and singlets
 
 # Remove outliers and doublets
