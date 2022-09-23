@@ -332,7 +332,8 @@ for (clust in unique(markers.obj$group)) {
 }
 sel.genes1 <- intersect(unique(sel.genes1[which( is.na(sel.genes1) == FALSE)]), rownames(seurat.obj))
 sel.genes2 <- intersect(unique(sel.genes2[which( is.na(sel.genes2) == FALSE)]), rownames(seurat.obj))
-sel.genes3 <- sort(rownames(seurat.obj)[ toupper(rownames(seurat.obj)) %in% c("HBE1","HBB","CD34","PECAM1","CD68","CD14","PTPRC","POU5F1","NANOG","DAZL","SYCP3","SRY","SOX9","AMH","CLU","INSL3","CYP17A1","CYP11A1","UPK3B","KRT19","WT1","GATA4","PDGFRA","PDGFRB","TCF21","SST","PLAU","CXCL14","MARCH3","PAX8","IFI44","IFIT3","OAS3","DDX58","PNOC","CDH6","CD24","FOXL2","LHX2","IRX3","CA9")])
+#sel.genes3 <- sort(rownames(seurat.obj)[ toupper(rownames(seurat.obj)) %in% c("HBE1","HBB","CD34","PECAM1","CD68","CD14","PTPRC","POU5F1","NANOG","DAZL","SYCP3","SRY","SOX9","AMH","CLU","INSL3","CYP17A1","CYP11A1","UPK3B","KRT19","WT1","GATA4","PDGFRA","PDGFRB","TCF21","SST","PLAU","CXCL14","MARCH3","PAX8","IFI44","IFIT3","OAS3","DDX58","PNOC","CDH6","CD24","FOXL2","LHX2","IRX3","CA9")])
+sel.genes3 <- sort(rownames(seurat.obj)[ toupper(rownames(seurat.obj)) %in% c("HBE1","HBB","CD34","PECAM1","CD68","CD14","PTPRC","POU5F1","NANOG","DAZL","SYCP3","SRY","SOX9","AMH","CLU","INSL3","CYP17A1","CYP11A1","UPK3B","KRT19","WT1","GATA4","PDGFRA","PDGFRB","TCF21","SST","PLAU","CXCL14","MARCH3","PAX8","IFI44","IFIT3","OAS3","DDX58","PNOC","CDH6","CD24","FOXL2","LHX2","IRX3","CA9","AKAP12", "RSPO1", "NR2F2", "INHBA", "CYP26B1", "SCUBE1", "DLX5", "MAFB", "GLI1", "MFAP5", "FOXL2", "SOX9")])
 sel.genes  <- unique(c(sel.genes1,sel.genes2, sel.genes3))
 sel.genes  <- sort(sel.genes[ which( is.na(sel.genes) == FALSE ) ])
 #--------------------------------------#

@@ -31,6 +31,5 @@ BASEPATH="${CURRPATH%/*/*}"
 SCRIPTPATH="$BASEPATH/SCRIPTS/pre_pipe.R"
 
 . /local/env/envconda.sh # load conda
-#conda activate /home/genouest/irset/privaud/.conda/envs/renv # activate R environment
 conda activate /home/genouest/irset/privaud/.conda/envs/seurat4 # activate R environment
 Rscript $SCRIPTPATH $input_seurat $output_seurat # launcher pre-pipe script

@@ -7,10 +7,10 @@
 #SBATCH --partition=sihp # cluster partition to use
 #SBATCH --mail-user=<user-email> # user email
 #SBATCH --mail-type=ALL # receive emails for all updates
-#SBATCH --chdir=<output-dir> # output directory where files will be created
+#SBATCH --chdir=<output-dir>
 
-input_seurat=.rds # absolute path to .rds preprocessed file
-output_seurat=.rds # .rds output file. No absolute path required
+input_seurat=.rds
+output_seurat=.rds
 
 #--------------------------------------------------------------------------------
 # Do not modify below
@@ -31,6 +31,5 @@ BASEPATH="${CURRPATH%/*/*}"
 SCRIPTPATH="$BASEPATH/SCRIPTS/pipe.R"
 
 . /local/env/envconda.sh # load conda
-#conda activate /home/genouest/irset/privaud/.conda/envs/renv # activate R environment
 conda activate /home/genouest/irset/privaud/.conda/envs/seurat4 # activate R environment
 Rscript $SCRIPTPATH $input_seurat $output_seurat # launcher pre-pipe script
